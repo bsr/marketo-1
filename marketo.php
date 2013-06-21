@@ -462,7 +462,7 @@ EOD;
         }
 
         $soap = self::check_soap();
-        if($soap) {
+        if(!$soap) {
 ?>
         <h2><?php _e('SOAP Required', 'gravity-forms-marketo'); ?></h2>
         <p style="font-size:1.2em"><?php _e('This plugin requires your server to have SOAP installed and enabled. Contact your web host to have them enable SOAP for your account.'); ?></p>
