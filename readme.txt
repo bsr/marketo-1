@@ -18,6 +18,8 @@ Map your Gravity Forms form fields to Marketo data, and have contacts automatica
 ####Easily view contacts in Marketo
 When the Entry is created, a link to the Contact's page in Marketo is shown inside WordPress.
 
+Requires a server with PHP 5+ and SOAP installed.
+
 == Screenshots ==
 
 1. Gravity Forms Marketo Add-on settings page
@@ -43,6 +45,9 @@ Well of course it does.
 This plugin is released under a GPL license.
 
 == Changelog ==
+
+= 1.3.4 =
+* Added check for SOAP support on server
 
 = 1.3.3 =
 * Added signup form, fixed todo links
@@ -74,6 +79,9 @@ This plugin is released under a GPL license.
 * Liftoff!
 
 == Upgrade Notice ==
+
+= 1.3.4 =
+* Added check for SOAP support on server
 
 = 1.0 =
 * Liftoff!

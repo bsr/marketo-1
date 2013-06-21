@@ -3,7 +3,7 @@
 Plugin Name: Gravity Forms Marketo Add-On
 Plugin URI: http://www.seodenver.com
 Description: Integrates Gravity Forms with Marketo allowing form submissions to be automatically sent to your Marketo account
-Version: 1.3.3
+Version: 1.3.4
 Author: Katz Web Services, Inc.
 Author URI: http://www.katzwebservices.com
 
@@ -35,7 +35,7 @@ class GFMarketo {
     private static $path = "gravity-forms-marketo/marketo.php";
     private static $url = "http://www.gravityforms.com";
     private static $slug = "gravity-forms-marketo";
-    private static $version = "1.3.3";
+    private static $version = "1.3.4";
     private static $min_gravityforms_version = "1.3.9";
     private static $is_debug = NULL;
     private static $settings = array(
@@ -216,9 +216,9 @@ class GFMarketo {
      * @deprecated
      */
     static function _deprecated_add_merge_tags($merge_tags, $form_id, $fields, $element_id) {
-    	
-    	if(version_compare(GFCommon::$version, '1.7', "<")) {
-        	$merge_tags[] = array('label' => __('Munchkin Cookie Data', 'gravity-forms-marketo'), 'tag' => '{munchkin}');
+
+        if(version_compare(GFCommon::$version, '1.7', "<")) {
+            $merge_tags[] = array('label' => __('Munchkin Cookie Data', 'gravity-forms-marketo'), 'tag' => '{munchkin}');
         }
 
         return $merge_tags;
@@ -454,19 +454,27 @@ EOD;
         }
 
 ?>
-	<img alt="<?php _e("Marketo Logo", "gravity-forms-marketo") ?>" src="<?php echo self::get_base_url()?>/images/marketo-logo.jpg" style="margin:0 0 15px 0; display:block;" width="161" height="70" />
-<?php 
+    <img alt="<?php _e("Marketo Logo", "gravity-forms-marketo") ?>" src="<?php echo self::get_base_url()?>/images/marketo-logo.jpg" style="margin:0 0 15px 0; display:block;" width="161" height="70" />
+<?php
         if(!get_site_option( 'gf_marketo_settings' )) {
-        	include_once(plugin_dir_path(__FILE__).'register.php');
-        	flush();
+            include_once(plugin_dir_path(__FILE__).'register.php');
+            flush();
         }
 
+        $soap = self::check_soap();
+        if($soap) {
+?>
+        <h2><?php _e('SOAP Required', 'gravity-forms-marketo'); ?></h2>
+        <p style="font-size:1.2em"><?php _e('This plugin requires your server to have SOAP installed and enabled. Contact your web host to have them enable SOAP for your account.'); ?></p>
+<?php
+            return;
+        }
         $valid = self::test_api(true);
 
 ?>
         <style type="text/css">ol li, li.ol-decimal { list-style: decimal outside; }</style>
         <form method="post" action="<?php echo remove_query_arg(array('refresh', 'retrieveListNames', '_wpnonce')); ?>">
-            
+
             <?php wp_nonce_field("update", "gf_marketo_update") ?>
 
             <h2><?php _e("Marketo Account Information", "gravity-forms-marketo") ?></h2>
@@ -731,6 +739,8 @@ EOD;
         $soapEndPoint = self::get_setting('endpoint');
         $debug = self::get_setting('debug');
 
+        if(!self::check_soap()) { return false; }
+
         if(!empty($soapEndPoint)) {
             $parsed = @parse_url($soapEndPoint);
             if(isset($parsed['host'])) {
@@ -742,8 +752,11 @@ EOD;
             return false;
         }
 
+        if(!class_exists("nusoap_client"))
+            require_once(plugin_dir_path(__FILE__)."nusoap/lib/nusoap.php");
+
         if(!class_exists("MarketoClient"))
-            require_once("api/Marketo_SOAP_PHP_Client.php");
+            require_once(plugin_dir_path(__FILE__)."api/Marketo_SOAP_PHP_Client.php");
 
         try {
             $client = new MarketoClient($accessKey, $secretKey, $soapEndPoint, $debug);
@@ -756,6 +769,10 @@ EOD;
         }
 
         return $client;
+    }
+
+    static function check_soap() {
+        return(extension_loaded('soap') || class_exists("SOAPClient"));
     }
 
     private static function test_api($echo = false) {
@@ -1663,7 +1680,7 @@ EOD;
 
         if(self::test_api()) {
 
-        	$cookie = self::get_munchkin_cookie();
+            $cookie = self::get_munchkin_cookie();
             $syncType = (!$cookie || self::get_setting('sync_type') === 'email') ? 'EMAIL' : $cookie;
             if(!$syncType) { $syncType = 'EMAIL'; }
 
