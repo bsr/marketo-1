@@ -3,7 +3,7 @@
 Plugin Name: Gravity Forms Marketo Add-On
 Plugin URI: http://www.seodenver.com
 Description: Integrates Gravity Forms with Marketo allowing form submissions to be automatically sent to your Marketo account
-Version: 1.3.4
+Version: 1.3.5
 Author: Katz Web Services, Inc.
 Author URI: http://www.katzwebservices.com
 
@@ -35,7 +35,7 @@ class GFMarketo {
     private static $path = "gravity-forms-marketo/marketo.php";
     private static $url = "http://www.gravityforms.com";
     private static $slug = "gravity-forms-marketo";
-    private static $version = "1.3.4";
+    private static $version = "1.3.5";
     private static $min_gravityforms_version = "1.3.9";
     private static $is_debug = NULL;
     private static $settings = array(
@@ -751,9 +751,6 @@ EOD;
         if(empty($accessKey) || empty($secretKey) || empty($soapEndPoint)) {
             return false;
         }
-
-        if(!class_exists("nusoap_client"))
-            require_once(plugin_dir_path(__FILE__)."nusoap/lib/nusoap.php");
 
         if(!class_exists("MarketoClient"))
             require_once(plugin_dir_path(__FILE__)."api/Marketo_SOAP_PHP_Client.php");

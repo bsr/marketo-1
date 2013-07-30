@@ -46,6 +46,9 @@ This plugin is released under a GPL license.
 
 == Changelog ==
 
+= 1.3.5 =
+* Fixed issue caused by requiring a file that didnt' exist
+
 = 1.3.4 =
 * Added check for SOAP support on server
 
@@ -79,6 +82,9 @@ This plugin is released under a GPL license.
 * Liftoff!
 
 == Upgrade Notice ==
+
+= 1.3.5 =
+* Fixed issue caused by requiring a file that didnt' exist
 
 = 1.3.4 =
 * Added check for SOAP support on server
