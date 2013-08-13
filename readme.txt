@@ -1,6 +1,6 @@
 === Marketo Gravity Forms Add-on ===
 Tags: marketo, gravity forms, forms, gravity, form, crm, gravity form, small business, business, marketing, e-commerce
-Requires at least: 2.8
+Requires at least: 3.2
 Tested up to: 3.6
 Stable tag: trunk
 Contributors: katzwebdesign, katzwebservices
@@ -46,6 +46,9 @@ This plugin is released under a GPL license.
 
 == Changelog ==
 
+= 1.3.6 =
+* Fixed issue where "Select the form to tap into" would spin forever if the "Marketo Campaign" dropdown wasn't defined.
+
 = 1.3.5 =
 * Fixed issue caused by requiring a file that didnt' exist
 
@@ -82,6 +85,9 @@ This plugin is released under a GPL license.
 * Liftoff!
 
 == Upgrade Notice ==
+
+= 1.3.6 =
+* Fixed issue where "Select the form to tap into" would spin forever if the "Marketo Campaign" dropdown wasn't defined.
 
 = 1.3.5 =
 * Fixed issue caused by requiring a file that didnt' exist
