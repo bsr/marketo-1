@@ -1252,7 +1252,7 @@ class MarketoClient {
 			}
 		} else {
 			// Not a good place to be.
-
+			return new WP_Error($errCode, $errorMessage, $ex);
 		}
 	}
 

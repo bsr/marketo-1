@@ -3,7 +3,7 @@
 Plugin Name: Gravity Forms Marketo Add-On
 Plugin URI: http://www.seodenver.com
 Description: Integrates Gravity Forms with Marketo allowing form submissions to be automatically sent to your Marketo account
-Version: 1.3.6
+Version: 1.3.7
 Author: Katz Web Services, Inc.
 Author URI: http://www.katzwebservices.com
 
@@ -35,7 +35,7 @@ class GFMarketo {
     private static $path = "gravity-forms-marketo/marketo.php";
     private static $url = "http://www.gravityforms.com";
     private static $slug = "gravity-forms-marketo";
-    private static $version = "1.3.6";
+    private static $version = "1.3.7";
     private static $min_gravityforms_version = "1.3.9";
     private static $is_debug = NULL;
     private static $settings = array(
@@ -470,16 +470,24 @@ EOD;
 <?php
             return;
         }
+
         $valid = self::test_api(true);
 
+        $get_timezone = wp_get_timezone_string();
 ?>
         <style type="text/css">ol li, li.ol-decimal { list-style: decimal outside; }</style>
-        <form method="post" action="<?php echo remove_query_arg(array('refresh', 'retrieveListNames', '_wpnonce')); ?>">
+        <form method="post" action="<?php echo add_query_arg(array('settings-updated' => true), remove_query_arg(array('refresh', 'retrieveListNames', '_wpnonce'))); ?>">
 
             <?php wp_nonce_field("update", "gf_marketo_update") ?>
 
             <h2><?php _e("Marketo Account Information", "gravity-forms-marketo") ?></h2>
-
+            <?php
+            if($get_timezone === 'UTC') {
+                echo '<div class="updated inline">';
+                printf(wpautop(__('Your website timezone is UTC. This may be because your timezone is not compatible with this plugin. Please check your %sWordPress Timezone settings%s and confirm the settings are accurate. If possible, use the location setting instead of the UTC offset setting.', 'gravity-forms-marketo')), '<a href="">', '</a>');
+                echo '</div>';
+            }
+            ?>
             <table class="form-table" style="clear:none; width:auto;">
                 <tr>
                     <th scope="row"><label for="gf_marketo_endpoint"><?php _e("Marketo SOAP Endpoint URL", "gravity-forms-marketo"); ?></label> </th>
@@ -512,7 +520,7 @@ EOD;
                     <th scope="row"><label for="gf_marketo_fill_munchkin"><?php _e("Fill Munchkin Data", "gravity-forms-marketo"); ?></label></th>
                     <td>
                         <input type="checkbox" id="gf_marketo_fill_munchkin" class="checkbox" name="gf_marketo_fill_munchkin" <?php checked(!empty($settings["fill_munchkin"])); ?> /> <label for="gf_marketo_fill_munchkin" class="description block"><?php _e('Allow populating fields with Munchkin tracking data.', 'gravity-forms-marketo'); ?></label>
-                        <?php _e('<div class="howto">To implement, either: <ol class="ol-decimal"><li>Set the input Default Value to <code>{munchkin}</code>, or</li><li>Set the "Input" > "Advanced" > "Allow Field to be Populated Dynamically" > "Parameter Name" to <code>munchkin</code>.</li></ol> <em>It is recommended to make fields with Munchkin data "Admin Only"</em>.</div>' , 'gravity-forms-marketo'); ?>
+                        <div class="howto"><?php printf(__('To implement, either: %sSet the input Default Value to %s{munchkin}%s, or%sSet the "Input" > "Advanced" > "Allow Field to be Populated Dynamically" > "Parameter Name" to %smunchkin%s.%sIt is recommended to make fields with Munchkin data "Admin Only"%s.' , 'gravity-forms-marketo'), '<ol class="ol-decimal"><li>', '<code>', '</code>', '</li><li>', '<code>', '</code>', '</li></ol> <em>', '</em>'); ?></div>
                     </td>
                 </tr>
                 <tr>
@@ -588,7 +596,7 @@ EOD;
             </h2>
 
             <div class="updated" id="message" style="margin-top:20px;">
-                <p><?php _e('Do you like this free plugin? <a href="http://katz.si/gfratemarketo">Please review it on WordPress.org</a>! <small class="description alignright">Note: You must be logged in to WordPress.org to leave a review!</small>', 'gravity-forms-marketo'); ?></p>
+                <p><?php printf(__('Do you like this free plugin? %sPlease review it on WordPress.org%s!', 'gravity-forms-marketo'), '<a href="http://katz.si/gfratemarketo">', '</a>'); ?></p>
             </div>
 
             <div class="clear"></div>
@@ -732,7 +740,7 @@ EOD;
      * Setup the Marketo API client using the plugin settings
      * @return boolean| [description]
      */
-    public static function get_api(){
+    public static function get_api($return_exceptions = false){
 
         // Setup the client
         $accessKey = self::get_setting('user_id');
@@ -758,11 +766,15 @@ EOD;
 
         try {
             $client = new MarketoClient($accessKey, $secretKey, $soapEndPoint, $debug);
-            $client->setTimeZone(get_site_option('gmt_offset'));
+            $client->setTimeZone(wp_get_timezone_string());
             if(defined('DOING_AJAX') || !current_user_can('manage_options') || is_admin()) {
                 $client->setDebug(false);
             }
+            if(current_user_can( 'manage_options' ) && isset($_GET['debug'])) {
+                $client->setDebug(true);
+            }
         } catch(Exception $e) {
+            if($return_exceptions) { return $e; }
             return false;
         }
 
@@ -778,7 +790,6 @@ EOD;
         $endpoint = self::get_setting('endpoint');
         $user_id = self::get_setting('user_id');
         $encryption_key = self::get_setting('encryption_key');
-        $api = self::get_api();
 
         if(empty($endpoint) && empty($encryption_key)) {
             $works = false;
@@ -786,25 +797,34 @@ EOD;
             $message = wpautop(__('Your Encryption Key is required, please <label for="gf_marketo_encryption_key"><a>enter your Encryption Key below</a></label>.', 'gravity-forms-marketo'));
             $works = false;
         } elseif(empty($user_id)) {
-            $message = wpautop(__('Your User ID is required, please <label for="gf_marketo_user_id"><a>enter your User ID below</a></label>.', 'gravity-forms-marketo'));
+            $message = wpautop(sprintf(__('Your User ID is required, please %senter your User ID below%s.', 'gravity-forms-marketo'), '<label for="gf_marketo_user_id"><a>', '</a></label>'));
             $works = false;
         } else {
-            $works = self::get_api();
+            $api = self::get_api(true);
 
-            $exceptions = '';
-            if(!empty($exceptions)) {
-                $message .= '<ul class="ul-square">';
-                foreach($exceptions as $exception){
-                    $messagetext = str_replace('[', __('Error key: [', 'gravity-forms-marketo'), str_replace(']', ']<br />Error message: ', $exception->getMessage()));
-                    $message .= '<li style="list-style:square;">'.$messagetext.'</li>';
-                }
-                $message .= '</ul>';
+            try {
+                $campaigns = $api->getCampaignsForSource();
+            } catch(Exception $e) {
+                $message = $api->getMessage();
+                $works = false;
             }
+
+            if(!empty($api) && is_a($api, 'Exception')) {
+                $message = wpautop(str_replace('[', __('Error key: [', 'gravity-forms-marketo'), str_replace(']', ']<br />Error message: ', $api->getMessage())));
+                $works = false;
+            } else if(is_wp_error($campaigns)) {
+                $message = sprintf(__('There was an error: %s', 'gravity-forms-marketo'), $campaigns->get_error_message());
+                $works = false;
+            } else {
+                $message = __('Your configuration appears to be working.', 'gravity-forms-marketo');
+                $works = true;
+            }
+
         }
 
-        $class = empty($class) ? ($works ? "updated inline" : "error inline") : $class;
-
         if($message && $echo && !defined('DOING_AJAX')) {
+            $class = empty($class) ? ($works ? "updated inline" : "error inline") : $class;
+
             echo sprintf('<div id="message" class="%s" style="display:block!important">%s</div>', $class, wpautop($message));
         }
 
@@ -1249,12 +1269,12 @@ EOD;
 
                     jQuery("#marketo_field_list").html(fieldList);
                     jQuery("#marketo_field_group").slideDown();
-                    jQuery('#marketo_field_list').trigger('load');
                 }
                 else{
                     jQuery("#marketo_field_group").slideUp();
                     jQuery("#marketo_field_list").html("");
                 }
+                jQuery('#marketo_field_list').trigger('load');
                 jQuery("#marketo_wait").hide();
             }
 
@@ -1598,7 +1618,7 @@ EOD;
         if(empty($field_name)) {
             $field_name = "marketo_map_field_" . $variable_name;
         }
-        $str = "<select name='$field_name' id='$field_name'><option value=''>" . __("", "gravity-forms-marketo") . "</option>";
+        $str = "<select name='$field_name' id='$field_name'><option value=''></option>";
         foreach($fields as $field){
             $field_id = $field[0];
             $field_label = $field[1];
@@ -1910,4 +1930,50 @@ EOD;
     }
 
 
+}
+
+
+if(!function_exists('wp_get_timezone_string')) {
+
+/**
+ * Returns the timezone string for a site, even if it's set to a UTC offset
+ *
+ * Adapted from http://www.php.net/manual/en/function.timezone-name-from-abbr.php#89155
+ *
+ * From http://www.skyverge.com/blog/down-the-rabbit-hole-wordpress-and-timezones/
+ *
+ * @return string valid PHP timezone string
+ */
+function wp_get_timezone_string() {
+
+    // if site timezone string exists, return it
+    if ( $timezone = get_option( 'timezone_string' ) )
+        return $timezone;
+
+    // get UTC offset, if it isn't set then return UTC
+    if ( 0 === ( $utc_offset = get_option( 'gmt_offset', 0 ) ) )
+        return 'UTC';
+
+    // adjust UTC offset from hours to seconds
+    $utc_offset *= 3600;
+
+    // attempt to guess the timezone string from the UTC offset
+    $timezone = timezone_name_from_abbr( '', $utc_offset );
+
+    // last try, guess timezone string manually
+    if ( false === $timezone ) {
+
+        $is_dst = date( 'I' );
+
+        foreach ( timezone_abbreviations_list() as $abbr ) {
+            foreach ( $abbr as $city ) {
+                if ( $city['dst'] == $is_dst && $city['offset'] == $utc_offset )
+                    return $city['timezone_id'];
+            }
+        }
+    }
+
+    // fallback to UTC
+    return 'UTC';
+}
 }
